@@ -141,7 +141,7 @@ def get_chat_history(
     return msgs
 
 
-@router.post("/", response_model=ChatResponse)
+@router.post("", response_model=ChatResponse)
 def send_message(
     property_id: int,
     payload: ChatRequest,

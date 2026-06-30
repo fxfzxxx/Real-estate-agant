@@ -26,6 +26,7 @@ app = FastAPI(
     ),
     version="1.0.0",
     lifespan=lifespan,
+    redirect_slashes=False,
 )
 
 _frontend_url = os.getenv("FRONTEND_URL", "")

@@ -9,7 +9,7 @@ from app.models.schemas import EnquiryCreate, EnquiryRead
 router = APIRouter(prefix="/properties/{property_id}/enquiries", tags=["enquiries"])
 
 
-@router.post("/", response_model=EnquiryRead, status_code=201)
+@router.post("", response_model=EnquiryRead, status_code=201)
 def submit_enquiry(
     property_id: int,
     payload: EnquiryCreate,

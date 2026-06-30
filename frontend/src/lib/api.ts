@@ -34,7 +34,7 @@ export function listProperties(filters: PropertyFilters = {}) {
       .filter(([, v]) => v !== undefined && v !== '')
       .map(([k, v]) => [k, String(v)])
   );
-  return apiFetch<import('@/types').Property[]>(`/properties/?${params}`);
+  return apiFetch<import('@/types').Property[]>(`/properties?${params}`);
 }
 
 export function getProperty(id: number) {
@@ -50,7 +50,7 @@ export function sendChatMessage(
   buyerId?: number
 ) {
   return apiFetch<import('@/types').ChatResponse>(
-    `/properties/${propertyId}/chat/`,
+    `/properties/${propertyId}/chat`,
     {
       method: 'POST',
       body: JSON.stringify({ message, session_id: sessionId, buyer_id: buyerId }),
@@ -70,7 +70,7 @@ export function submitEnquiry(
   propertyId: number,
   data: { name: string; email: string; phone?: string; message?: string }
 ) {
-  return apiFetch(`/properties/${propertyId}/enquiries/`, {
+  return apiFetch(`/properties/${propertyId}/enquiries`, {
     method: 'POST',
     body: JSON.stringify(data),
   });
@@ -84,7 +84,7 @@ export function sendGuidanceMessage(
   context: Record<string, unknown> = {},
   buyerId?: number
 ) {
-  return apiFetch<import('@/types').GuidanceResponse>('/guidance/', {
+  return apiFetch<import('@/types').GuidanceResponse>('/guidance', {
     method: 'POST',
     body: JSON.stringify({ message, session_id: sessionId, context, buyer_id: buyerId }),
   });

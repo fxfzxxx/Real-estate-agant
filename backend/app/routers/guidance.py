@@ -188,7 +188,7 @@ def _build_reply(ctx: dict, matched: list, message: str) -> str:  # noqa: C901
 # Endpoints
 # ---------------------------------------------------------------------------
 
-@router.post("/", response_model=GuidanceResponse)
+@router.post("", response_model=GuidanceResponse)
 def guidance_chat(payload: GuidanceRequest, db: Session = Depends(get_db)):
     ctx = payload.context or {}
 

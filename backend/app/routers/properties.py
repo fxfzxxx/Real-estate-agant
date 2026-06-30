@@ -11,7 +11,7 @@ from app.models.schemas import PropertyCreate, PropertyRead
 router = APIRouter(prefix="/properties", tags=["properties"])
 
 
-@router.get("/", response_model=List[PropertyRead])
+@router.get("", response_model=List[PropertyRead])
 def list_properties(
     suburb: Optional[str] = None,
     state: Optional[str] = None,
@@ -50,7 +50,7 @@ def get_property(property_id: int, db: Session = Depends(get_db)):
     return prop
 
 
-@router.post("/", response_model=PropertyRead, status_code=201)
+@router.post("", response_model=PropertyRead, status_code=201)
 def create_property(payload: PropertyCreate, db: Session = Depends(get_db)):
     prop = Property(**payload.model_dump())
     db.add(prop)
