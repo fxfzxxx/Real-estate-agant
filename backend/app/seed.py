@@ -1,187 +1,185 @@
-"""Seed script – populates the database with realistic demo data."""
-from datetime import datetime, timezone
+"""Seed script – populates the database with realistic demo data.
+
+All 50 property records are located in Stonefields, Auckland (postcode 1072).
+The records are synthetic but modelled on the real Stonefields market: a
+master-planned suburb on the old Mt Wellington quarry dominated by modern
+terraces and townhouses, with low-rise apartments and standalone family
+homes. Price bands, typologies and days-on-market reflect the suburb's
+actual profile.
+
+Run:  python -m app.seed            # seeds only if the DB is empty
+      python -m app.seed --reset    # drops all tables and reseeds
+"""
+import random
+import sys
 
 from app.database import engine, SessionLocal
 from app.models.models import Base, Agent, Property, Buyer, MarketSnapshot
 
+SUBURB = "Stonefields"
+REGION = "Auckland"
+POSTCODE = "1072"
 
-def seed():
+# Stonefields streets (quarry/geology themed naming used across the suburb)
+STREETS = [
+    "Stonefields Avenue",
+    "Tephra Boulevard",
+    "Stonemason Avenue",
+    "Barbarich Drive",
+    "Tihi Street",
+    "Korere Terrace",
+    "Basalt Lane",
+    "Scoria Crescent",
+    "Obsidian Way",
+    "Quarry View Road",
+    "Pumice Place",
+    "Moraine Way",
+]
+
+IMAGES = [
+    "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800",
+    "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800",
+    "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800",
+    "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800",
+    "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800",
+    "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800",
+    "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800",
+    "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800",
+    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800",
+    "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800",
+    "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=800",
+    "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=800",
+]
+
+# (type, share of stock, price band NZ$, beds range, land m² range or None)
+TYPOLOGY = [
+    ("townhouse", 0.40, (950_000, 1_350_000), (2, 4), (90, 180)),
+    ("house",     0.30, (1_300_000, 2_400_000), (3, 5), (200, 450)),
+    ("apartment", 0.25, (700_000, 950_000), (1, 3), None),
+    ("unit",      0.05, (850_000, 1_050_000), (2, 3), (80, 140)),
+]
+
+FEATURES_BY_TYPE = {
+    "townhouse": ["North-Facing Courtyard", "Double Glazing", "Internal Garage",
+                  "Heat Pump", "Designer Kitchen", "Study Nook", "EV Charger"],
+    "house": ["Landscaped Garden", "Double Garage", "Open-Plan Living", "Heat Pump",
+              "Butler's Pantry", "Media Room", "Solar Panels", "Outdoor Fireplace"],
+    "apartment": ["Balcony", "Secure Parking", "Lift Access", "Storage Locker",
+                  "Double Glazing", "Heat Pump", "City Views"],
+    "unit": ["Private Courtyard", "Single Garage", "Heat Pump", "Low Maintenance",
+             "Fresh Interiors"],
+}
+
+TITLE_TEMPLATES = {
+    "townhouse": ["Modern Terrace on {street}", "Sun-Drenched Townhouse, {street}",
+                  "Designer Terrace Living – {street}", "Family Townhouse near the Park"],
+    "house": ["Standalone Family Home on {street}", "Executive Residence – {street}",
+              "Entertainer's Home with Quarry Views", "Premium Family Living, {street}"],
+    "apartment": ["Light-Filled Apartment on {street}", "Lock-and-Leave Apartment – {street}",
+                  "Stylish City-Fringe Apartment", "Elevated Apartment with Views"],
+    "unit": ["Easy-Care Unit on {street}", "Tidy Starter in the Heart of Stonefields"],
+}
+
+DESCRIPTION_BITS = [
+    "Walking distance to Stonefields Market Square, cafes and the local school.",
+    "Moments from Maungarei Springs Wetland and the suburb's walking trails.",
+    "Easy access to Lunn Ave shopping and a quick commute to the CBD.",
+    "Set in a quiet, family-friendly street in this master-planned community.",
+    "Zoned for Stonefields School with parks and playgrounds on your doorstep.",
+    "Enjoys all-day sun with views toward the basalt cliffs of the old quarry.",
+]
+
+
+def _make_properties(rng: random.Random, agent_ids: list) -> list:
+    props = []
+    counts = [round(share * 50) for _, share, *_ in TYPOLOGY]
+    # Ensure exactly 50
+    counts[0] += 50 - sum(counts)
+
+    street_numbers: dict = {}
+    for (ptype, _share, price_band, beds_range, land_range), count in zip(TYPOLOGY, counts):
+        for _ in range(count):
+            street = rng.choice(STREETS)
+            street_numbers[street] = street_numbers.get(street, rng.randint(1, 8)) + rng.randint(1, 6)
+            number = street_numbers[street]
+            unit_prefix = f"{rng.randint(1, 12)}/" if ptype in ("apartment", "unit") else ""
+
+            beds = rng.randint(*beds_range)
+            baths = max(1, beds - rng.randint(0, 1))
+            cars = 0 if (ptype == "apartment" and rng.random() < 0.25) else rng.randint(1, 2)
+            price = round(rng.uniform(*price_band) / 5_000) * 5_000
+            land = rng.randint(*land_range) if land_range else None
+
+            title = rng.choice(TITLE_TEMPLATES[ptype]).format(street=street)
+            features = rng.sample(FEATURES_BY_TYPE[ptype], k=rng.randint(3, 5))
+            description = (
+                f"{beds}-bedroom {ptype} in Stonefields, Auckland. "
+                + " ".join(rng.sample(DESCRIPTION_BITS, k=2))
+            )
+
+            imgs = rng.sample(IMAGES, k=2)
+            status = "sold" if rng.random() < 0.10 else "active"
+
+            props.append(
+                Property(
+                    title=title,
+                    description=description,
+                    address=f"{unit_prefix}{number} {street}, Stonefields, Auckland {POSTCODE}",
+                    suburb=SUBURB,
+                    state=REGION,
+                    postcode=POSTCODE,
+                    price=price,
+                    bedrooms=beds,
+                    bathrooms=baths,
+                    car_spaces=cars,
+                    land_size=land,
+                    property_type=ptype,
+                    status=status,
+                    features=features,
+                    images=imgs,
+                    agent_id=rng.choice(agent_ids),
+                    days_on_market=rng.randint(1, 75),
+                )
+            )
+    rng.shuffle(props)
+    return props
+
+
+def seed(reset: bool = False):
+    if reset:
+        Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
 
     if db.query(Agent).first():
-        print("Database already seeded – skipping.")
+        print("Database already seeded – skipping. Use --reset to reseed from scratch.")
         db.close()
         return
+
+    rng = random.Random(42)  # deterministic output
 
     # Agents
     agents = [
         Agent(
             name="Sarah Mitchell",
-            email="sarah@premierproperty.com.au",
-            phone="0412 345 678",
-            agency="Premier Property Group",
+            email="sarah@stonefieldsrealty.co.nz",
+            phone="021 345 678",
+            agency="Stonefields Realty Group",
             avatar_url="https://i.pravatar.cc/150?img=47",
         ),
         Agent(
             name="James Nguyen",
-            email="james@eliterealty.com.au",
-            phone="0423 456 789",
-            agency="Elite Realty",
+            email="james@stonefieldsrealty.co.nz",
+            phone="021 456 789",
+            agency="Stonefields Realty Group",
             avatar_url="https://i.pravatar.cc/150?img=68",
         ),
     ]
     db.add_all(agents)
     db.flush()
 
-    # Properties
-    properties = [
-        Property(
-            title="Modern Family Home in Kew",
-            description=(
-                "Stunning 4-bedroom residence in prestigious Kew. "
-                "Featuring open-plan living, gourmet kitchen, and landscaped gardens. "
-                "Walking distance to top schools and parklands."
-            ),
-            address="12 Elm Street, Kew VIC 3101",
-            suburb="Kew",
-            state="VIC",
-            postcode="3101",
-            price=1_850_000,
-            bedrooms=4,
-            bathrooms=3,
-            car_spaces=2,
-            land_size=620,
-            property_type="house",
-            features=["Pool", "Double Garage", "Ducted Heating", "Alfresco", "Study"],
-            images=[
-                "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800",
-                "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800",
-            ],
-            agent_id=agents[0].id,
-            days_on_market=12,
-        ),
-        Property(
-            title="Stylish Apartment in South Yarra",
-            description=(
-                "Sophisticated 2-bedroom apartment with city views. "
-                "Designer kitchen, spa bath, and premium finishes throughout. "
-                "Steps from Chapel Street restaurants and tram network."
-            ),
-            address="8/42 Park Street, South Yarra VIC 3141",
-            suburb="South Yarra",
-            state="VIC",
-            postcode="3141",
-            price=920_000,
-            bedrooms=2,
-            bathrooms=2,
-            car_spaces=1,
-            land_size=None,
-            property_type="apartment",
-            features=["City Views", "Gym", "Concierge", "Secure Parking"],
-            images=[
-                "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800",
-                "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800",
-            ],
-            agent_id=agents[1].id,
-            days_on_market=5,
-        ),
-        Property(
-            title="Charming Townhouse in Richmond",
-            description=(
-                "Beautifully renovated 3-bedroom townhouse in vibrant Richmond. "
-                "North-facing courtyard, polished floorboards, and modern bathrooms. "
-                "Minutes to MCG, Swan Street, and the CBD."
-            ),
-            address="3/27 Bridge Road, Richmond VIC 3121",
-            suburb="Richmond",
-            state="VIC",
-            postcode="3121",
-            price=1_150_000,
-            bedrooms=3,
-            bathrooms=2,
-            car_spaces=1,
-            land_size=180,
-            property_type="townhouse",
-            features=["Courtyard", "Polished Floors", "Split System AC", "Storage"],
-            images=[
-                "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800",
-            ],
-            agent_id=agents[0].id,
-            days_on_market=21,
-        ),
-        Property(
-            title="Entry-Level Unit in Footscray",
-            description=(
-                "Ideal first home or investment – spacious 2-bedroom unit "
-                "with fresh interiors, private courtyard, and lock-up garage. "
-                "Great transport links to the CBD."
-            ),
-            address="5/88 Paisley Street, Footscray VIC 3011",
-            suburb="Footscray",
-            state="VIC",
-            postcode="3011",
-            price=580_000,
-            bedrooms=2,
-            bathrooms=1,
-            car_spaces=1,
-            land_size=None,
-            property_type="apartment",
-            features=["Courtyard", "Lock-up Garage", "New Kitchen"],
-            images=[
-                "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800",
-            ],
-            agent_id=agents[1].id,
-            days_on_market=34,
-        ),
-        Property(
-            title="Executive Home in Toorak",
-            description=(
-                "Grand 5-bedroom family estate on 900 m² in Toorak's golden triangle. "
-                "Heated pool, home theatre, 4-car garage, and prestigious school zoning."
-            ),
-            address="99 Glenferrie Road, Toorak VIC 3142",
-            suburb="Toorak",
-            state="VIC",
-            postcode="3142",
-            price=4_200_000,
-            bedrooms=5,
-            bathrooms=4,
-            car_spaces=4,
-            land_size=900,
-            property_type="house",
-            features=["Heated Pool", "Home Theatre", "Wine Cellar", "Smart Home", "4-Car Garage"],
-            images=[
-                "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800",
-            ],
-            agent_id=agents[0].id,
-            days_on_market=8,
-        ),
-        Property(
-            title="Light-Filled Apartment in Fitzroy",
-            description=(
-                "Trendy 1-bedroom apartment in the heart of Fitzroy. "
-                "Exposed brick, high ceilings, and a sun-drenched balcony. "
-                "Walk to Brunswick Street cafes and galleries."
-            ),
-            address="12/5 Johnston Street, Fitzroy VIC 3065",
-            suburb="Fitzroy",
-            state="VIC",
-            postcode="3065",
-            price=650_000,
-            bedrooms=1,
-            bathrooms=1,
-            car_spaces=0,
-            land_size=None,
-            property_type="apartment",
-            features=["Balcony", "Exposed Brick", "High Ceilings"],
-            images=[
-                "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800",
-            ],
-            agent_id=agents[1].id,
-            days_on_market=3,
-        ),
-    ]
+    # Properties – 50 records, all in Stonefields
+    properties = _make_properties(rng, [a.id for a in agents])
     db.add_all(properties)
 
     # Buyers
@@ -189,22 +187,22 @@ def seed():
         Buyer(
             name="Emily Chen",
             email="emily.chen@email.com",
-            phone="0411 222 333",
-            budget_min=800_000,
-            budget_max=1_100_000,
-            preferred_suburbs=["Richmond", "Fitzroy", "Collingwood"],
-            bedrooms_min=2,
-            property_types=["house", "townhouse"],
+            phone="021 222 333",
+            budget_min=950_000,
+            budget_max=1_300_000,
+            preferred_suburbs=["Stonefields"],
+            bedrooms_min=3,
+            property_types=["townhouse", "house"],
             lifestyle_tags=["near schools", "quiet street"],
             buyer_stage="active",
         ),
         Buyer(
             name="David Park",
             email="david.park@email.com",
-            phone="0422 333 444",
-            budget_min=500_000,
-            budget_max=700_000,
-            preferred_suburbs=["Footscray", "Yarraville", "Williamstown"],
+            phone="021 333 444",
+            budget_min=700_000,
+            budget_max=900_000,
+            preferred_suburbs=["Stonefields"],
             bedrooms_min=1,
             property_types=["apartment", "unit"],
             lifestyle_tags=["first home buyer", "public transport"],
@@ -213,27 +211,27 @@ def seed():
         Buyer(
             name="Sophie Laurent",
             email="sophie.laurent@email.com",
-            phone="0433 444 555",
+            phone="021 444 555",
             buyer_stage="future",
         ),
     ]
     db.add_all(buyers)
 
-    # Market Snapshots
+    # Market snapshots – Stonefields plus neighbouring suburbs for context
     snapshots = [
-        MarketSnapshot(suburb="Kew", state="VIC", median_price=2_100_000, avg_days_on_market=18, quarterly_growth_pct=2.1, annual_growth_pct=7.4, listings_count=34),
-        MarketSnapshot(suburb="South Yarra", state="VIC", median_price=1_050_000, avg_days_on_market=22, quarterly_growth_pct=1.8, annual_growth_pct=5.9, listings_count=52),
-        MarketSnapshot(suburb="Richmond", state="VIC", median_price=1_250_000, avg_days_on_market=19, quarterly_growth_pct=2.4, annual_growth_pct=8.1, listings_count=29),
-        MarketSnapshot(suburb="Footscray", state="VIC", median_price=680_000, avg_days_on_market=28, quarterly_growth_pct=3.1, annual_growth_pct=9.8, listings_count=67),
-        MarketSnapshot(suburb="Toorak", state="VIC", median_price=4_500_000, avg_days_on_market=35, quarterly_growth_pct=1.2, annual_growth_pct=4.3, listings_count=21),
-        MarketSnapshot(suburb="Fitzroy", state="VIC", median_price=780_000, avg_days_on_market=15, quarterly_growth_pct=2.7, annual_growth_pct=10.2, listings_count=43),
+        MarketSnapshot(suburb="Stonefields", state=REGION, median_price=1_250_000, avg_days_on_market=32, quarterly_growth_pct=1.4, annual_growth_pct=4.2, listings_count=50),
+        MarketSnapshot(suburb="Mt Wellington", state=REGION, median_price=1_050_000, avg_days_on_market=36, quarterly_growth_pct=1.1, annual_growth_pct=3.5, listings_count=64),
+        MarketSnapshot(suburb="St Johns", state=REGION, median_price=1_400_000, avg_days_on_market=34, quarterly_growth_pct=1.6, annual_growth_pct=4.8, listings_count=28),
+        MarketSnapshot(suburb="Meadowbank", state=REGION, median_price=1_550_000, avg_days_on_market=30, quarterly_growth_pct=1.8, annual_growth_pct=5.1, listings_count=22),
     ]
     db.add_all(snapshots)
 
     db.commit()
-    print("✅ Database seeded successfully.")
+    active = sum(1 for p in properties if p.status == "active")
+    print(f"✅ Database seeded: {len(properties)} Stonefields properties ({active} active), "
+          f"{len(agents)} agents, {len(buyers)} buyers, {len(snapshots)} market snapshots.")
     db.close()
 
 
 if __name__ == "__main__":
-    seed()
+    seed(reset="--reset" in sys.argv)

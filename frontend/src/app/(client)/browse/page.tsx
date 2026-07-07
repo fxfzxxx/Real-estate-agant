@@ -56,7 +56,7 @@ export default function BrowsePage() {
             Discover Properties
           </h1>
           <p className="text-body-lg text-on-surface-variant">
-            Curated listings across New Zealand.
+            Curated listings in Stonefields, Auckland.
           </p>
         </div>
         <form

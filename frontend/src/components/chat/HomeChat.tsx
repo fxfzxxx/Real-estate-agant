@@ -126,10 +126,10 @@ export default function HomeChat() {
   }
 
   const starters = [
-    'A 3-bedroom house in Auckland around $1.2m',
-    'Apartment near the city, budget $800k',
-    'Lifestyle property with land in Waikato',
-    'First home, budget around $650k',
+    'A 3-bedroom townhouse in Stonefields around $1.2m',
+    'Standalone house in Stonefields, budget up to 2m',
+    'Apartment in Stonefields, budget $850k',
+    'First home in Stonefields, around $750k',
   ];
 
   return (
