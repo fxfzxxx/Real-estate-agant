@@ -1,18 +1,18 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { Property, MarketSnapshot } from '@/types';
 import { getProperty, submitEnquiry, getComparableListings, getSuburbSnapshot } from '@/lib/api';
 import ChatWidget from '@/components/chat/ChatWidget';
 import PropertyCard from '@/components/property/PropertyCard';
 
 function fmt(n: number) {
-  return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD', maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat('en-NZ', { style: 'currency', currency: 'NZD', maximumFractionDigits: 0 }).format(n);
 }
 
-export default function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
-  const propertyId = Number(id);
+export default function PropertyDetailPage({ params }: { params: { id: string } }) {
+  // Next 14 passes route params as a plain object (Promise-based params are Next 15+)
+  const propertyId = Number(params.id);
 
   const [property, setProperty] = useState<Property | null>(null);
   const [comparables, setComparables] = useState<Property[]>([]);

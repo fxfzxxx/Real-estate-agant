@@ -5,9 +5,9 @@ interface Props {
 }
 
 function formatPrice(price: number) {
-  return new Intl.NumberFormat('en-AU', {
+  return new Intl.NumberFormat('en-NZ', {
     style: 'currency',
-    currency: 'AUD',
+    currency: 'NZD',
     maximumFractionDigits: 0,
   }).format(price);
 }
