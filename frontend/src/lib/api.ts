@@ -120,6 +120,88 @@ export function logLeadAction(leadId: number, action: string) {
   });
 }
 
+// ── Popular properties & discovery recommendations ──────────────────────────
+
+export function popularProperties(limit = 4) {
+  return apiFetch<import('@/types').Property[]>(`/properties/popular?limit=${limit}`);
+}
+
+export function getRecommendations(sessionId: string, limit = 10) {
+  return apiFetch<import('@/types').Property[]>(
+    `/recommendations?session_id=${encodeURIComponent(sessionId)}&limit=${limit}`
+  );
+}
+
+export function recordSwipe(data: {
+  property_id: number;
+  session_id: string;
+  liked: boolean;
+  buyer_id?: number;
+}) {
+  return apiFetch('/recommendations/swipe', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export function getLikedProperties(sessionId: string) {
+  return apiFetch<import('@/types').Property[]>(
+    `/recommendations/liked?session_id=${encodeURIComponent(sessionId)}`
+  );
+}
+
+// ── Contact capture ──────────────────────────────────────────────────────────
+
+export function submitContact(data: {
+  name: string;
+  email: string;
+  phone?: string;
+  message?: string;
+  source?: string;
+  preferences?: Record<string, unknown>;
+}) {
+  return apiFetch<import('@/types').ContactMessage>('/contact', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+// ── Admin ────────────────────────────────────────────────────────────────────
+
+export function getAdminSummary() {
+  return apiFetch<import('@/types').AdminSummary>('/admin/summary');
+}
+
+export function getPropertyPopularity() {
+  return apiFetch<import('@/types').PropertyPopularity[]>('/admin/property-popularity');
+}
+
+export function getDeals() {
+  return apiFetch<import('@/types').DealStage[]>('/admin/deals');
+}
+
+export function listActions(status?: string) {
+  const params = status ? `?status=${status}` : '';
+  return apiFetch<import('@/types').AgentAction[]>(`/admin/actions${params}`);
+}
+
+export function generateActions() {
+  return apiFetch<import('@/types').AgentAction[]>('/admin/actions/generate', {
+    method: 'POST',
+  });
+}
+
+export function updateAction(actionId: number, status: string) {
+  return apiFetch<import('@/types').AgentAction>(`/admin/actions/${actionId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
+export function getActionsSummary() {
+  return apiFetch<import('@/types').ActionSummary>('/admin/actions/summary');
+}
+
 // ── Market ───────────────────────────────────────────────────────────────────
 
 export function listMarketSnapshots(state?: string) {

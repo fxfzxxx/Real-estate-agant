@@ -17,7 +17,7 @@ export default function PropertyCard({ property }: Props) {
 
   return (
     <a
-      href={`/listings/${property.id}`}
+      href={`/browse/${property.id}`}
       className="group block rounded-2xl overflow-hidden bg-white shadow hover:shadow-lg transition-shadow border border-gray-100"
     >
       {/* Image */}

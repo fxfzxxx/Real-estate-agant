@@ -80,8 +80,8 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
       <div className="max-w-7xl mx-auto px-4 py-20 text-center">
         <p className="text-4xl mb-4">😕</p>
         <p className="text-xl font-semibold text-gray-700">Property not found</p>
-        <a href="/listings" className="mt-4 inline-block text-emerald-600 hover:underline text-sm">
-          ← Back to listings
+        <a href="/browse" className="mt-4 inline-block text-emerald-600 hover:underline text-sm">
+          ← Back to browse
         </a>
       </div>
     );
@@ -93,7 +93,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       {/* Breadcrumb */}
       <nav className="text-sm text-gray-400 mb-6 flex items-center gap-2">
-        <a href="/listings" className="hover:text-emerald-600">Listings</a>
+        <a href="/browse" className="hover:text-emerald-600">Browse</a>
         <span>/</span>
         <span className="text-gray-600 truncate max-w-xs">{property.title}</span>
       </nav>

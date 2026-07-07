@@ -17,32 +17,45 @@ Real-estate-agant/
 │   │   │   ├── models.py     # ORM models
 │   │   │   └── schemas.py    # Pydantic schemas
 │   │   └── routers/
-│   │       ├── properties.py  # Property listings CRUD
-│   │       ├── chat.py        # AI property chat assistant
-│   │       ├── guidance.py    # Buyer guidance engine (AI matching)
-│   │       ├── crm.py         # Agent CRM (leads, buyers, agents)
-│   │       ├── financial.py   # Financial planning & affordability
-│   │       ├── market.py      # Market insights (suburb snapshots)
-│   │       └── enquiries.py   # Enquiry capture forms
+│   │       ├── properties.py       # Property listings CRUD + popular ranking
+│   │       ├── chat.py             # AI property chat assistant
+│   │       ├── guidance.py         # Buyer guidance engine (AI matching)
+│   │       ├── recommendations.py  # Discovery swipe deck (like / dislike)
+│   │       ├── contact.py          # Contact capture (form + chat details)
+│   │       ├── crm.py              # Agent CRM (leads, buyers, agents)
+│   │       ├── admin.py            # Admin summary, popularity, deals, AI actions
+│   │       ├── financial.py        # Financial planning & affordability
+│   │       ├── market.py           # Market insights (suburb snapshots)
+│   │       └── enquiries.py        # Enquiry capture forms
 │   ├── tests/
-│   │   └── test_api.py       # 28 API integration tests
+│   │   └── test_api.py       # 40 API integration tests
 │   └── requirements.txt
 └── frontend/         # Next.js 14 + TypeScript + Tailwind CSS
     └── src/
         ├── app/
-        │   ├── page.tsx              # Home page
-        │   ├── listings/             # Property listing portal
-        │   ├── listings/[id]/        # Property detail + AI chat
-        │   ├── guidance/             # AI buyer guidance engine
-        │   ├── market/               # Market insights dashboard
-        │   ├── financial/            # Financial readiness planner
-        │   └── crm/                  # Agent CRM dashboard
+        │   ├── (client)/                 # CLIENT SITE (buyer-facing)
+        │   │   ├── page.tsx              # AI chat landing (greeting + popular listings)
+        │   │   ├── browse/               # Browse properties (bento gallery + filters)
+        │   │   ├── browse/[id]/          # Property detail + AI chat
+        │   │   ├── discover/             # Discovery swipe (like / pass deck)
+        │   │   ├── contact/              # Contact page (leave a message)
+        │   │   └── financial/            # Financial readiness planner
+        │   └── admin/                    # ADMIN SITE (agent-facing)
+        │       ├── page.tsx              # AI dashboard (recommended actions)
+        │       ├── inbox/                # Communications summary
+        │       ├── properties/           # Property popularity analytics
+        │       ├── deals/                # Deals pipeline by stage
+        │       ├── leads/                # Lead management (CRM)
+        │       └── market/               # Market insights dashboard
         ├── components/
+        │   ├── layout/ClientNav.tsx      # Client top/bottom navigation
+        │   ├── layout/AdminNav.tsx       # Admin sidebar navigation
+        │   ├── property/PropertyTile.tsx # Stitch-styled property card
         │   ├── property/PropertyCard.tsx
-        │   ├── chat/ChatWidget.tsx
-        │   ├── guidance/GuidanceChat.tsx
-        │   └── financial/FinancialPlanner.tsx
-        ├── lib/api.ts    # Typed API client
+        │   ├── chat/HomeChat.tsx         # Landing AI chat w/ contact capture
+        │   └── chat/ChatWidget.tsx
+        ├── lib/api.ts        # Typed API client
+        ├── lib/session.ts    # Anonymous session + stored contact
         └── types/index.ts
 ```
 
@@ -78,34 +91,73 @@ npm run dev                     # http://localhost:3000
 
 ## 🧩 Platform Features
 
-### 1. 🏡 Property Listing Portal (`/listings`)
-- Browse active listings with filters: suburb, type, price range, bedrooms
-- Each listing has an enquiry capture form that auto-creates a CRM lead
+The frontend is split into two sites sharing one backend:
 
-### 2. 💬 AI Property Chat Assistant (`/listings/[id]` → Chat tab)
+- **Client site** (`/`) — buyer-facing: AI chat landing, browse, discovery swipe, contact
+- **Admin site** (`/admin`) — agent-facing: AI action dashboard, inbox, popularity, deals, leads, market
+
+### Client site
+
+#### 1. 💬 AI Chat Landing (`/`)
+- Lands on a conversational AI greeting with the most popular properties shown by default
+- Extracts budget, suburbs, bedrooms and lifestyle preferences from natural language
+- Prompts visitors to leave their name / email / phone; details shared in chat are
+  captured automatically and create a CRM lead with the accumulated preferences
+
+#### 2. 🏡 Browse Properties (`/browse`)
+- Bento-style gallery (featured hero + cards) with suburb, price band, and type filters
+- One-tap switch into Discovery Swipe mode
+
+#### 3. 🃏 Discovery Swipe (`/discover`)
+- Random recommendation deck: swipe right to like, left to pass (drag on touch,
+  buttons on desktop)
+- Likes build a shortlist, feed property popularity analytics, and enrich the
+  buyer's preference profile for agent follow-up
+
+#### 4. ✉️ Contact (`/contact`)
+- Leave a message with name / email / phone — creates a contact record and CRM lead
+- Call / text / email shortcuts
+
+### Admin site
+
+#### 5. 🤖 AI Dashboard (`/admin`)
+- AI-recommended actions generated from client activity: follow up hot leads, chase
+  deals at offer stage, respond to new contacts, advertise stale listings
+- Every action is agent-triggered: **Do / Defer / Skip**, with reopen — plus a summary
+  of actions done and still to do
+- Live counters for hot leads, enquiries, messages, chat sessions, likes
+
+#### 6. 📥 Communications Inbox (`/admin/inbox`)
+- Summary of everything clients left on the site: property enquiries, contact
+  messages (incl. details captured in chat) and chat/swipe activity counts
+
+#### 7. 📈 Property Popularity (`/admin/properties`)
+- Per-listing likes, passes, enquiries and chat engagement rolled into a popularity score
+
+#### 8. 🤝 Deals Pipeline (`/admin/deals`)
+- Every lead by stage (`new → contacted → viewing → offer → closed`) at a glance
+
+### Shared / legacy features
+
+#### 9. 💬 AI Property Chat Assistant (`/browse/[id]` → Chat tab)
 - Per-listing conversational AI that answers buyer questions using listing data
 - Handles: family suitability, price, size, investment potential, comparable homes, inspections
 - Every chat interaction is logged to the CRM and updates the lead's intent score
 - **Production note:** Replace `_ai_reply()` in `backend/app/routers/chat.py` with an LLM call (e.g. OpenAI) — the property context is already structured for injection as a system prompt
 
-### 3. 🧠 Buyer Guidance Engine (`/guidance`)
-- Conversational intake: budget, suburb, bedroom count, property type, lifestyle preferences
-- AI extracts preferences from natural language and surfaces matched listings in real time
-- Classifies buyers as **active** / **semi-ready** / **future** based on profile completeness
-
-### 4. 📊 Market Insights Dashboard (`/market`)
+### 10. 📊 Market Insights Dashboard (`/admin/market`)
 - Suburb-level: median price, days on market, quarterly & annual growth, listing count
 - Comparable listings per property (±20% price in same suburb)
 - Accessible from each property detail page via the "Market" tab
 
-### 5. 🤖 Agentic CRM (`/crm`)
+### 11. 🗂 Lead Management (`/admin/leads`)
 - Full lead pipeline: `new → contacted → viewing → offer → closed`
 - Intent score (0–100) derived from buyer behaviour events
 - Temperature classification: 🔥 hot / 🌡 warm / ❄️ cold
 - One-click action logging (Call / Email / Showing / Offer) with AI-suggested next action
 - All buyer interactions across chat, guidance, enquiries, and financial planner auto-create/update leads
 
-### 6. 💰 Financial Readiness Planner (`/financial`)
+### 12. 💰 Financial Readiness Planner (`/financial`)
 - Estimates borrowing power using stress-tested interest rate (6.25% + 3% buffer)
 - Calculates months to deposit target based on current savings + monthly savings rate
 - Generates personalised readiness timeline and purchase price range
@@ -155,7 +207,8 @@ Agent already owns the relationship
 ```bash
 cd backend
 python -m pytest tests/test_api.py -v
-# 28 tests covering: properties, chat, guidance, CRM, enquiries, financial, market
+# 40 tests covering: properties, chat, guidance, CRM, enquiries, financial, market,
+# recommendations/swipes, contact capture, and admin actions
 ```
 
 ---
