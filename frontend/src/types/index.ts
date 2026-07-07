@@ -84,6 +84,74 @@ export interface GuidanceResponse {
   buyer_stage: string;
 }
 
+export interface ContactMessage {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  message?: string;
+  source: string;
+  preferences: Record<string, unknown>;
+  handled: boolean;
+  created_at: string;
+}
+
+export interface AgentAction {
+  id: number;
+  title: string;
+  description?: string;
+  category: 'follow_up' | 'chase_deal' | 'advertise' | 'outreach';
+  priority: 'high' | 'medium' | 'low';
+  status: 'pending' | 'done' | 'dismissed' | 'deferred';
+  lead_id?: number;
+  property_id?: number;
+  created_at: string;
+  resolved_at?: string;
+}
+
+export interface ActionSummary {
+  pending: number;
+  done: number;
+  dismissed: number;
+  deferred: number;
+}
+
+export interface CommunicationItem {
+  kind: 'enquiry' | 'contact_message' | 'chat_session';
+  name?: string;
+  email?: string;
+  phone?: string;
+  summary?: string;
+  property_id?: number;
+  property_title?: string;
+  created_at: string;
+}
+
+export interface AdminSummary {
+  enquiries_count: number;
+  contact_messages_count: number;
+  chat_sessions_count: number;
+  likes_count: number;
+  dislikes_count: number;
+  leads_count: number;
+  hot_leads_count: number;
+  recent_communications: CommunicationItem[];
+}
+
+export interface PropertyPopularity {
+  property: Property;
+  likes: number;
+  dislikes: number;
+  enquiries: number;
+  chat_messages: number;
+  popularity_score: number;
+}
+
+export interface DealStage {
+  stage: string;
+  leads: Lead[];
+}
+
 export interface MarketSnapshot {
   id: number;
   suburb: string;

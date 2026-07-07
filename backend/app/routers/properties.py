@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.models import Property
+from app.models.models import ChatMessage, Enquiry, Property, PropertySwipe
 from app.models.schemas import PropertyCreate, PropertyRead
 
 router = APIRouter(prefix="/properties", tags=["properties"])
@@ -40,6 +40,31 @@ def list_properties(
     if bedrooms_min is not None:
         q = q.filter(Property.bedrooms >= bedrooms_min)
     return q.offset(skip).limit(limit).all()
+
+
+@router.get("/popular", response_model=List[PropertyRead])
+def popular_properties(
+    limit: int = Query(4, ge=1, le=20), db: Session = Depends(get_db)
+):
+    """Most popular active listings, ranked by likes, enquiries and chats."""
+    props = db.query(Property).filter(Property.status == "active").all()
+
+    def score(prop: Property) -> int:
+        likes = (
+            db.query(PropertySwipe)
+            .filter(PropertySwipe.property_id == prop.id, PropertySwipe.liked.is_(True))
+            .count()
+        )
+        enquiries = db.query(Enquiry).filter(Enquiry.property_id == prop.id).count()
+        chats = (
+            db.query(ChatMessage)
+            .filter(ChatMessage.property_id == prop.id, ChatMessage.role == "user")
+            .count()
+        )
+        return likes * 3 + enquiries * 5 + chats * 2
+
+    props.sort(key=score, reverse=True)
+    return props[:limit]
 
 
 @router.get("/{property_id}", response_model=PropertyRead)

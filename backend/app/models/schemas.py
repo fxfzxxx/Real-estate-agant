@@ -228,6 +228,115 @@ class AffordabilityEstimate(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Property Swipes (discovery mode)
+# ---------------------------------------------------------------------------
+
+class SwipeCreate(BaseModel):
+    property_id: int
+    session_id: str
+    liked: bool
+    buyer_id: Optional[int] = None
+
+
+class SwipeRead(SwipeCreate):
+    id: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Contact Messages
+# ---------------------------------------------------------------------------
+
+class ContactMessageCreate(BaseModel):
+    name: str
+    email: EmailStr
+    phone: Optional[str] = None
+    message: Optional[str] = None
+    source: str = "contact_page"
+    preferences: dict = {}
+
+
+class ContactMessageRead(ContactMessageCreate):
+    id: int
+    handled: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Agent Actions (admin dashboard)
+# ---------------------------------------------------------------------------
+
+class AgentActionRead(BaseModel):
+    id: int
+    title: str
+    description: Optional[str]
+    category: str
+    priority: str
+    status: str
+    lead_id: Optional[int]
+    property_id: Optional[int]
+    created_at: datetime
+    resolved_at: Optional[datetime]
+
+    model_config = {"from_attributes": True}
+
+
+class AgentActionUpdate(BaseModel):
+    status: str  # pending | done | dismissed | deferred
+
+
+class ActionSummary(BaseModel):
+    pending: int
+    done: int
+    dismissed: int
+    deferred: int
+
+
+# ---------------------------------------------------------------------------
+# Admin dashboard aggregates
+# ---------------------------------------------------------------------------
+
+class CommunicationItem(BaseModel):
+    kind: str          # enquiry | contact_message | chat_session
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    summary: Optional[str] = None
+    property_id: Optional[int] = None
+    property_title: Optional[str] = None
+    created_at: datetime
+
+
+class AdminSummary(BaseModel):
+    enquiries_count: int
+    contact_messages_count: int
+    chat_sessions_count: int
+    likes_count: int
+    dislikes_count: int
+    leads_count: int
+    hot_leads_count: int
+    recent_communications: List[CommunicationItem] = []
+
+
+class PropertyPopularity(BaseModel):
+    property: PropertyRead
+    likes: int
+    dislikes: int
+    enquiries: int
+    chat_messages: int
+    popularity_score: int
+
+
+class DealStage(BaseModel):
+    stage: str
+    leads: List[LeadRead] = []
+
+
+# ---------------------------------------------------------------------------
 # Market Insights
 # ---------------------------------------------------------------------------
 

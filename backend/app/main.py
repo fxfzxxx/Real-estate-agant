@@ -7,7 +7,18 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine
 from app.models.models import Base
-from app.routers import chat, crm, enquiries, financial, guidance, market, properties
+from app.routers import (
+    admin,
+    chat,
+    contact,
+    crm,
+    enquiries,
+    financial,
+    guidance,
+    market,
+    properties,
+    recommendations,
+)
 
 
 @asynccontextmanager
@@ -56,6 +67,9 @@ app.include_router(guidance.router)
 app.include_router(crm.router)
 app.include_router(financial.router)
 app.include_router(market.router)
+app.include_router(recommendations.router)
+app.include_router(contact.router)
+app.include_router(admin.router)
 
 
 @app.get("/")

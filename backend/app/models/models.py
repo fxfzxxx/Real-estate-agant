@@ -197,6 +197,64 @@ class FinancialProfile(Base):
 
 
 # ---------------------------------------------------------------------------
+# Property Swipes (client discovery mode – like / dislike)
+# ---------------------------------------------------------------------------
+
+class PropertySwipe(Base):
+    __tablename__ = "property_swipes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    property_id = Column(Integer, ForeignKey("properties.id"), nullable=False)
+    buyer_id = Column(Integer, ForeignKey("buyers.id"))
+    session_id = Column(String(100), nullable=False)
+    liked = Column(Boolean, nullable=False)
+    created_at = Column(DateTime, default=_utcnow)
+
+    property = relationship("Property")
+    buyer = relationship("Buyer")
+
+
+# ---------------------------------------------------------------------------
+# Contact Messages (client contact page + details captured in chat)
+# ---------------------------------------------------------------------------
+
+class ContactMessage(Base):
+    __tablename__ = "contact_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=False)
+    phone = Column(String(50))
+    message = Column(Text)
+    source = Column(String(50), default="contact_page")  # contact_page | chat
+    preferences = Column(JSON, default=dict)  # preference context captured in chat
+    handled = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=_utcnow)
+
+
+# ---------------------------------------------------------------------------
+# Agent Actions (AI-recommended tasks surfaced on the admin dashboard)
+# ---------------------------------------------------------------------------
+
+class AgentAction(Base):
+    __tablename__ = "agent_actions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), nullable=False)
+    description = Column(Text)
+    category = Column(String(50), default="follow_up")  # follow_up | chase_deal | advertise | outreach
+    priority = Column(String(20), default="medium")     # high | medium | low
+    status = Column(String(20), default="pending")      # pending | done | dismissed | deferred
+    lead_id = Column(Integer, ForeignKey("leads.id"))
+    property_id = Column(Integer, ForeignKey("properties.id"))
+    created_at = Column(DateTime, default=_utcnow)
+    resolved_at = Column(DateTime)
+
+    lead = relationship("Lead")
+    property = relationship("Property")
+
+
+# ---------------------------------------------------------------------------
 # Market Data (Suburb Snapshots)
 # ---------------------------------------------------------------------------
 

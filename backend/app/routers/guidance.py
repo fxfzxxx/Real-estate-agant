@@ -180,6 +180,11 @@ def _build_reply(ctx: dict, matched: list, message: str) -> str:  # noqa: C901
         parts.append("Could you share your budget range so I can refine my suggestions?")
     elif not ctx.get("bedrooms_min"):
         parts.append("How many bedrooms are you looking for?")
+    elif not ctx.get("contact_captured"):
+        parts.append(
+            "By the way – if you share your name, email or phone number, "
+            "our agent can follow up with hand-picked matches for you."
+        )
 
     return " ".join(parts)
 
