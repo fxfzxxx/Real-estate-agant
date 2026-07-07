@@ -15,9 +15,11 @@ export function formatPrice(price: number) {
 export default function PropertyTile({
   property,
   compact = false,
+  likes,
 }: {
   property: Property;
   compact?: boolean;
+  likes?: number;
 }) {
   return (
     <Link
@@ -36,6 +38,12 @@ export default function PropertyTile({
         {property.status !== 'active' && (
           <span className="absolute top-3 left-3 bg-secondary-container text-on-secondary-container px-2 py-1 rounded text-label-sm uppercase tracking-wider font-bold z-10">
             {property.status}
+          </span>
+        )}
+        {likes !== undefined && likes > 0 && (
+          <span className="absolute top-3 right-3 bg-surface/90 backdrop-blur-sm text-primary px-2 py-1 rounded-full text-label-sm font-bold z-10 flex items-center gap-1">
+            <span className="material-symbols-outlined text-[14px]">favorite</span>
+            {likes}
           </span>
         )}
       </div>

@@ -126,6 +126,10 @@ export function popularProperties(limit = 4) {
   return apiFetch<import('@/types').Property[]>(`/properties/popular?limit=${limit}`);
 }
 
+export function trendingProperties(limit = 4) {
+  return apiFetch<import('@/types').TrendingProperty[]>(`/properties/trending?limit=${limit}`);
+}
+
 export function getRecommendations(sessionId: string, limit = 10) {
   return apiFetch<import('@/types').Property[]>(
     `/recommendations?session_id=${encodeURIComponent(sessionId)}&limit=${limit}`

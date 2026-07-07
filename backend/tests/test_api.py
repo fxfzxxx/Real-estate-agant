@@ -745,3 +745,16 @@ class TestAdmin:
     def test_update_action_invalid_status(self, client):
         r = client.patch("/admin/actions/1", json={"status": "bogus"})
         assert r.status_code == 422
+
+    def test_trending_properties(self, client, db_session):
+        agent = _seed_agent(db_session)
+        prop = _seed_property(db_session, agent.id)
+        client.post(
+            "/recommendations/swipe",
+            json={"property_id": prop.id, "session_id": "s1", "liked": True},
+        )
+        r = client.get("/properties/trending")
+        assert r.status_code == 200
+        row = r.json()[0]
+        assert row["property"]["id"] == prop.id
+        assert row["likes"] == 1

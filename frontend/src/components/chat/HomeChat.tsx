@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { GuidanceResponse, Property } from '@/types';
-import { popularProperties, sendGuidanceMessage, submitContact } from '@/lib/api';
+import { GuidanceResponse, Property, TrendingProperty } from '@/types';
+import { sendGuidanceMessage, submitContact, trendingProperties } from '@/lib/api';
 import { getSessionId, getStoredContact, storeContact } from '@/lib/session';
 import PropertyTile from '@/components/property/PropertyTile';
 
@@ -11,6 +11,7 @@ type Message = {
   role: 'user' | 'assistant';
   content: string;
   properties?: Property[];
+  trending?: TrendingProperty[];
 };
 
 const EMAIL_RE = /[\w.+-]+@[\w-]+\.[\w.-]+/;
@@ -18,32 +19,62 @@ const PHONE_RE = /(?:\+?\d[\d\s()-]{6,}\d)/;
 const NAME_RE = /(?:my name is|i am|i'm|this is)\s+([A-Za-z][A-Za-z'-]+(?:\s+[A-Za-z][A-Za-z'-]+)?)/i;
 
 const GREETING =
-  "Kia ora! I'm the NZ Realty AI assistant. Tell me what you're looking for — budget, location, bedrooms, lifestyle — and I'll match you with the right properties. Here are some of our most popular listings to get you started:";
+  "Kia ora! I'm the NZ Realty AI assistant. Tell me what you're looking for — budget, bedrooms, lifestyle — and I'll match you with the right Stonefields properties.";
+
+function trendingIntro(trending: TrendingProperty[]): string {
+  const top = trending[0];
+  const totalLikes = trending.reduce((sum, t) => sum + t.likes, 0);
+  return (
+    `While you think about it — these are the hottest properties in Stonefields right now. ` +
+    `"${top.property.title}" alone has ${top.likes} likes from other buyers this month, ` +
+    `and together these four have picked up ${totalLikes} likes. Tap any card for details, or ask me about one:`
+  );
+}
 
 export default function HomeChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [introTyping, setIntroTyping] = useState(false);
   const [context, setContext] = useState<Record<string, unknown>>({});
   const sessionId = useRef('');
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Staged intro dialog: greeting bubble → typing indicator → trending bubble
   useEffect(() => {
     sessionId.current = getSessionId();
     let cancelled = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    timers.push(
+      setTimeout(() => {
+        if (cancelled) return;
+        setMessages([{ role: 'assistant', content: GREETING }]);
+        setIntroTyping(true);
+      }, 400)
+    );
     (async () => {
-      let popular: Property[] = [];
+      let trending: TrendingProperty[] = [];
       try {
-        popular = await popularProperties(4);
+        trending = await trendingProperties(4);
       } catch {
-        // backend offline – still show the greeting
+        // backend offline – skip the trending bubble
       }
-      if (!cancelled) {
-        setMessages([{ role: 'assistant', content: GREETING, properties: popular }]);
-      }
+      timers.push(
+        setTimeout(() => {
+          if (cancelled) return;
+          setIntroTyping(false);
+          if (trending.length > 0) {
+            setMessages((prev) => [
+              ...prev,
+              { role: 'assistant', content: trendingIntro(trending), trending },
+            ]);
+          }
+        }, 1600)
+      );
     })();
     return () => {
       cancelled = true;
+      timers.forEach(clearTimeout);
     };
   }, []);
 
@@ -166,9 +197,16 @@ export default function HomeChat() {
                 ))}
               </div>
             )}
+            {msg.trending && msg.trending.length > 0 && (
+              <div className="flex gap-sm overflow-x-auto mt-sm pb-2 pl-10">
+                {msg.trending.map((t) => (
+                  <PropertyTile key={t.property.id} property={t.property} likes={t.likes} compact />
+                ))}
+              </div>
+            )}
           </div>
         ))}
-        {loading && (
+        {(loading || introTyping) && (
           <div className="flex justify-start pl-10">
             <div className="bg-surface-container-low border border-outline-variant rounded-xl rounded-bl-sm px-4 py-3 flex gap-1">
               <span className="w-2 h-2 bg-outline rounded-full animate-bounce [animation-delay:0ms]" />
@@ -181,7 +219,7 @@ export default function HomeChat() {
       </div>
 
       {/* Starters */}
-      {messages.length <= 1 && (
+      {!messages.some((m) => m.role === 'user') && (
         <div className="pb-sm">
           <p className="text-label-sm text-on-surface-variant mb-2">Try asking:</p>
           <div className="flex flex-wrap gap-2">

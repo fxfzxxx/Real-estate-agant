@@ -25,6 +25,11 @@ from app.routers import (
 async def lifespan(app: FastAPI):
     # Create all tables on startup
     Base.metadata.create_all(bind=engine)
+    # Auto-seed demo data when the database is empty (set SEED_ON_STARTUP=0 to disable);
+    # seed() is a no-op if any data already exists.
+    if os.getenv("SEED_ON_STARTUP", "1") != "0":
+        from app.seed import seed
+        seed()
     yield
 
 
