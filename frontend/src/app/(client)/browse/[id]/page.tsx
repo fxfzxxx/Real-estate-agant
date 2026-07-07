@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { Property, MarketSnapshot } from '@/types';
 import { getProperty, submitEnquiry, getComparableListings, getSuburbSnapshot } from '@/lib/api';
 import ChatWidget from '@/components/chat/ChatWidget';
@@ -10,8 +10,8 @@ function fmt(n: number) {
   return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD', maximumFractionDigits: 0 }).format(n);
 }
 
-export default function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function PropertyDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const propertyId = Number(id);
 
   const [property, setProperty] = useState<Property | null>(null);
