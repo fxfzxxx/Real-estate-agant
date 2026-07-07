@@ -228,6 +228,16 @@ class AffordabilityEstimate(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Trending properties (client chat / landing)
+# ---------------------------------------------------------------------------
+
+class TrendingProperty(BaseModel):
+    property: PropertyRead
+    likes: int
+    enquiries: int
+
+
+# ---------------------------------------------------------------------------
 # Property Swipes (discovery mode)
 # ---------------------------------------------------------------------------
 

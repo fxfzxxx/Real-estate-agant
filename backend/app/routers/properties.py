@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.models import ChatMessage, Enquiry, Property, PropertySwipe
-from app.models.schemas import PropertyCreate, PropertyRead
+from app.models.schemas import PropertyCreate, PropertyRead, TrendingProperty
 
 router = APIRouter(prefix="/properties", tags=["properties"])
 
@@ -65,6 +65,28 @@ def popular_properties(
 
     props.sort(key=score, reverse=True)
     return props[:limit]
+
+
+@router.get("/trending", response_model=List[TrendingProperty])
+def trending_properties(
+    limit: int = Query(4, ge=1, le=20), db: Session = Depends(get_db)
+):
+    """Most-loved active listings with their engagement counts, for the
+    client chat's "trending now" dialog."""
+    rows = []
+    for prop in db.query(Property).filter(Property.status == "active").all():
+        likes = (
+            db.query(PropertySwipe)
+            .filter(PropertySwipe.property_id == prop.id, PropertySwipe.liked.is_(True))
+            .count()
+        )
+        enquiries = db.query(Enquiry).filter(Enquiry.property_id == prop.id).count()
+        rows.append((likes * 3 + enquiries * 5, likes, enquiries, prop))
+    rows.sort(key=lambda r: r[0], reverse=True)
+    return [
+        TrendingProperty(property=PropertyRead.model_validate(p), likes=likes, enquiries=enq)
+        for _score, likes, enq, p in rows[:limit]
+    ]
 
 
 @router.get("/{property_id}", response_model=PropertyRead)

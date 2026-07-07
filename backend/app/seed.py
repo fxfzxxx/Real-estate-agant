@@ -14,7 +14,16 @@ import random
 import sys
 
 from app.database import engine, SessionLocal
-from app.models.models import Base, Agent, Property, Buyer, MarketSnapshot
+from app.models.models import (
+    Base,
+    Agent,
+    Property,
+    Buyer,
+    ChatMessage,
+    Enquiry,
+    MarketSnapshot,
+    PropertySwipe,
+)
 
 SUBURB = "Stonefields"
 REGION = "Auckland"
@@ -217,6 +226,60 @@ def seed(reset: bool = False):
     ]
     db.add_all(buyers)
 
+    # Engagement history – swipes, enquiries and chat questions so that
+    # popularity/trending rankings are meaningful from day one
+    db.flush()
+    active_props = [p for p in properties if p.status == "active"]
+    trending = rng.sample(active_props, k=8)  # a handful of clear favourites
+
+    first_names = ["Olivia", "Liam", "Isla", "Noah", "Amelia", "Jack", "Mia", "Leo",
+                   "Ruby", "Ethan", "Grace", "Hunter", "Ella", "Mason", "Zoe", "Cooper"]
+    swipes, enquiries, chats = [], [], []
+
+    for prop in active_props:
+        likes = rng.randint(8, 22) if prop in trending else rng.randint(0, 5)
+        dislikes = rng.randint(0, 4)
+        for i in range(likes):
+            swipes.append(PropertySwipe(
+                property_id=prop.id, session_id=f"seed-session-{rng.randint(1, 60)}", liked=True,
+            ))
+        for i in range(dislikes):
+            swipes.append(PropertySwipe(
+                property_id=prop.id, session_id=f"seed-session-{rng.randint(1, 60)}", liked=False,
+            ))
+
+    for prop in rng.sample(trending, k=6):
+        name = rng.choice(first_names)
+        enquiries.append(Enquiry(
+            property_id=prop.id,
+            name=f"{name} {rng.choice('ABCDEFGHJKLMNPRSTW')}.",
+            email=f"{name.lower()}{rng.randint(1, 99)}@email.com",
+            phone=f"021 {rng.randint(100, 999)} {rng.randint(1000, 9999)}",
+            message=rng.choice([
+                "Hi, is this property still available? Keen to view this weekend.",
+                "Could you send me the LIM report and title details?",
+                "What are the body corporate fees? Interested in making an offer.",
+                "Is the vendor open to pre-auction offers?",
+            ]),
+        ))
+
+    chat_questions = [
+        "Is this property in the Stonefields School zone?",
+        "How long has it been on the market?",
+        "What similar properties sold nearby recently?",
+        "Is it suitable for a family with two kids?",
+    ]
+    for prop in rng.sample(trending, k=5):
+        session = f"seed-chat-{prop.id}"
+        for q in rng.sample(chat_questions, k=rng.randint(1, 3)):
+            chats.append(ChatMessage(property_id=prop.id, session_id=session, role="user", content=q))
+            chats.append(ChatMessage(property_id=prop.id, session_id=session, role="assistant",
+                                     content="(seeded demo reply)"))
+
+    db.add_all(swipes)
+    db.add_all(enquiries)
+    db.add_all(chats)
+
     # Market snapshots – Stonefields plus neighbouring suburbs for context
     snapshots = [
         MarketSnapshot(suburb="Stonefields", state=REGION, median_price=1_250_000, avg_days_on_market=32, quarterly_growth_pct=1.4, annual_growth_pct=4.2, listings_count=50),
@@ -229,7 +292,8 @@ def seed(reset: bool = False):
     db.commit()
     active = sum(1 for p in properties if p.status == "active")
     print(f"✅ Database seeded: {len(properties)} Stonefields properties ({active} active), "
-          f"{len(agents)} agents, {len(buyers)} buyers, {len(snapshots)} market snapshots.")
+          f"{len(agents)} agents, {len(buyers)} buyers, {len(snapshots)} market snapshots, "
+          f"{len(swipes)} swipes, {len(enquiries)} enquiries, {len(chats)} chat messages.")
     db.close()
 
 

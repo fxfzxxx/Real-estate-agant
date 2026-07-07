@@ -84,6 +84,12 @@ export interface GuidanceResponse {
   buyer_stage: string;
 }
 
+export interface TrendingProperty {
+  property: Property;
+  likes: number;
+  enquiries: number;
+}
+
 export interface ContactMessage {
   id: number;
   name: string;
